@@ -80,6 +80,14 @@ const audioSrcFromBase64 = (value: string, mimeType: string) => {
 };
 
 const collectMedia = (value: unknown, result: CampaignResult, visited = new Set<unknown>()) => {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (isAudioUrl(trimmed) && !result.audioItems.some((audio) => audio.src === trimmed)) {
+      result.audioItems.push({ id: `audio-${result.audioItems.length + 1}`, src: trimmed, mimeType: /^data:audio\/([^;,]+)/i.test(trimmed) ? trimmed.slice(5, trimmed.indexOf(";")) : "audio/mpeg", source: "url" });
+    }
+    return;
+  }
+
   if (!isRecord(value) && !Array.isArray(value)) return;
   if (visited.has(value)) return;
   visited.add(value);
@@ -99,7 +107,9 @@ const collectMedia = (value: unknown, result: CampaignResult, visited = new Set<
 
   if (typeof audioBase64 === "string" && audioBase64.trim()) {
     const src = isAudioUrl(audioBase64) && !/^data:audio\//i.test(audioBase64.trim()) ? audioBase64.trim() : audioSrcFromBase64(audioBase64, mimeType);
-    result.audioItems.push({ id: `audio-${result.audioItems.length + 1}`, src, mimeType, source: src === audioBase64.trim() ? "url" : "base64" });
+    if (!result.audioItems.some((audio) => audio.src === src)) {
+      result.audioItems.push({ id: `audio-${result.audioItems.length + 1}`, src, mimeType, source: src === audioBase64.trim() ? "url" : "base64" });
+    }
   }
 
   Object.values(value).forEach((nested) => collectMedia(nested, result, visited));
